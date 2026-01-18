@@ -17,8 +17,8 @@ use Psr\Log\NullLogger;
  */
 final class MockEventNotifier implements EventNotifierInterface
 {
-    /** @var DomainEvent[] */
-    private array $notifiedEvents = [];
+    /** @var array<array{matchId: string, event: DomainEvent}> */
+    private array $notifications = [];
 
     public function __construct(
         private readonly LoggerInterface $logger = new NullLogger(),
@@ -27,7 +27,7 @@ final class MockEventNotifier implements EventNotifierInterface
 
     public function notify(DomainEvent $event): void
     {
-        $this->notifiedEvents[] = $event;
+        $this->notifications[] = ['matchId' => '', 'event' => $event];
 
         $this->logger->info('Domain event dispatched', [
             'event_class' => $event::class,
@@ -37,7 +37,7 @@ final class MockEventNotifier implements EventNotifierInterface
 
     public function notifyMatch(string $matchId, DomainEvent $event): void
     {
-        $this->notifiedEvents[] = $event;
+        $this->notifications[] = ['matchId' => $matchId, 'event' => $event];
 
         $this->logger->info('Domain event dispatched for match', [
             'match_id' => $matchId,
@@ -47,20 +47,20 @@ final class MockEventNotifier implements EventNotifierInterface
     }
 
     /**
-     * Get all notified events (useful for testing).
+     * Get all notifications (useful for testing).
      *
-     * @return DomainEvent[]
+     * @return array<array{matchId: string, event: DomainEvent}>
      */
-    public function getNotifiedEvents(): array
+    public function getNotifications(): array
     {
-        return $this->notifiedEvents;
+        return $this->notifications;
     }
 
     /**
-     * Clear notified events (useful for testing).
+     * Clear notifications (useful for testing).
      */
     public function clear(): void
     {
-        $this->notifiedEvents = [];
+        $this->notifications = [];
     }
 }

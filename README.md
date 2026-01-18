@@ -1,173 +1,183 @@
 # Football Events Application
 
-Simple application for handling football events - recruitment task.
+Application for handling football events (goals, fouls) with real-time statistics.
 
-## Acceptance Criteria
+## Architecture
 
-The following business requirements must be met by the solution:
+**Symfony 7.2 + DDD + Light CQRS**
 
-### Core business requirements
-- [ ] System accurately logs and updates statistics upon receiving a **goal** event, including details such as scorer, assisting player, team, minute, and match ID.
-- [ ] System accurately logs and updates records upon receiving a **foul** event, including details such as player at fault, affected player, team, match ID, and precise time of the foul.
-- [ ] All event data is permanently stored and retrievable
-- [ ] Relevant statistics are calculated and maintained for both event types
-- [ ] Clients receive information about all events in real-time
-- [ ] Data integrity is maintained at all times
-- [ ] Historical data is preserved and accessible
-- [ ] System can handle high volume of events
+```
+src/
+├── Application/           # Commands, Queries, Handlers, DTOs
+├── Domain/               # Entities, Value Objects, Domain Events, Interfaces
+├── Infrastructure/       # Doctrine repositories, Notifications
+└── Presentation/         # Controllers
+```
 
-### Client communication requirements
-- [ ] All clients receive event notifications
-- [ ] Information is delivered in a timely manner
-- [ ] Communication is reliable and consistent
+### Key Decisions
+- **Symfony Messenger** for CQRS (command.bus, query.bus)
+- **Doctrine ORM** with XML mapping (clean domain, no ORM attributes)
+- **SQLite** for simplicity (file-based, no external DB)
+- **Custom Doctrine Types** for Value Objects (EventId, MatchId, etc.)
+- **Single Table Inheritance** for GoalEvent/FoulEvent
 
-### Recruitment requirements
-- [ ] The solution should be provided as a GitHub repository at new branch with at least three meaningful commits
-- [ ] Some kind of abstraction is allowed to demonstrate the solution over a fully functioning application
-- [ ] Try to devote no more than 3 hours to solving the problem - anything you don't have time to do can be written as a plan for further action
-- [ ] Try not to use AI tools. If you do - write down how you use it
-- [ ] The solution presented is your colleague's PoC and is not a final contract for storing and exchanging data. If you believe the current implementation might be different, please include this in your changes
-- [ ] You have full responsibility and influence over the final solution; the PoC is just a teaser – show off your skills
+📄 See [Architecture Decision Records](docs/adr/README.md) for detailed rationale.
 
 ## Requirements
 
 - Docker
 - Docker Compose
 
-## Installation and Setup
+## Installation
 
-1. Build and run the container:
 ```bash
+# Build and start
 docker compose up --build -d
+
+# Create database schema
+docker exec football_events_app php bin/console doctrine:schema:create
 ```
 
-2. Build and run the container:
-```bash
-docker exec -it football_events_app composer install
-```
+Application: `http://localhost:8000`
 
-3. The application will be available at: `http://localhost:8000`
+## API Endpoints
 
-## Usage
-
-### Foul Event
-
-Send a POST request with a foul event:
+### Create Goal Event
 
 ```bash
-curl -X POST http://localhost:8000/event \
+curl -X POST http://localhost:8000/api/events \
   -H "Content-Type: application/json" \
-  -d '{"type": "foul", "player": "William Saliba", "team_id": "arsenal", "match_id": "m1", "minute": 45, "second": 34}'
+  -d '{
+    "type": "goal",
+    "match_id": "m1",
+    "team_id": "arsenal",
+    "scorer": "Saka",
+    "assistant": "Odegaard",
+    "minute": 23,
+    "second": 15
+  }'
+```
+
+### Create Foul Event
+
+```bash
+curl -X POST http://localhost:8000/api/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "foul",
+    "match_id": "m1",
+    "team_id": "chelsea",
+    "player": "Silva",
+    "affected_player": "Saka",
+    "minute": 45,
+    "second": 30
+  }'
+```
+
+### Get Match Statistics
+
+```bash
+# All teams in match
+curl "http://localhost:8000/api/statistics?match_id=m1"
+
+# Specific team
+curl "http://localhost:8000/api/statistics?match_id=m1&team_id=arsenal"
 ```
 
 ### Example Response
 
-Both events return a similar response structure:
-
-```json
-{
-  "status": "success",
-  "message": "Event saved successfully",
-  "event": {
-    "type": "foul",
-    "timestamp": 1729599123,
-    "data": {
-      "type": "foul",
-      "player": "William Saliba",
-      "team_id": "arsenal",
-      "match_id": "m1",
-      "minute": 45,
-      "second": 34
-    }
-  }
-}
-```
-
-### Statistics Endpoint
-
-Get team statistics for a specific match:
-
-```bash
-curl "http://localhost:8000/statistics?match_id=m1&team_id=arsenal"
-```
-
-Get all team statistics for a match:
-
-```bash
-curl "http://localhost:8000/statistics?match_id=m1"
-```
-
-Example response:
 ```json
 {
   "match_id": "m1",
-  "team_id": "arsenal",
   "statistics": {
-    "fouls": 2
+    "arsenal": { "goals": 2, "fouls": 1 },
+    "chelsea": { "goals": 1, "fouls": 3 }
   }
 }
 ```
 
-Foul events automatically update team statistics (fouls counter) for the specified team in the given match.
-
 ## Tests
 
-### PHPUnit Tests
-
-Run PHPUnit tests inside the container:
-
 ```bash
-docker exec -it football_events_app vendor/bin/phpunit tests
+# Run all tests
+docker exec football_events_app vendor/bin/phpunit
+
+# Run with coverage
+docker exec football_events_app vendor/bin/phpunit --testdox
 ```
 
-Or after entering the container:
-```bash
-docker exec -it football_events_app bash
-vendor/bin/phpunit tests
-```
+**Test Coverage:**
+- 46 tests, 106 assertions
+- Unit tests: Value Objects, Entities, Handlers
+- Functional tests: API endpoints
 
-### Codeception API Tests
-
-Run Codeception API tests for comprehensive endpoint testing:
+## Code Quality
 
 ```bash
-docker exec -it football_events_app vendor/bin/codecept run Api
+# PHP-CS-Fixer (PSR-12 + Symfony)
+docker exec football_events_app vendor/bin/php-cs-fixer fix --dry-run
+
+# PHPStan Level 8
+docker exec football_events_app vendor/bin/phpstan analyse
 ```
-
-Run all Codeception tests:
-
-```bash
-docker exec -it football_events_app vendor/bin/codecept run
-```
-
-### Test Coverage
-
-The project includes:
-- **Unit tests** (PHPUnit): Test individual classes and methods
-- **API tests** (Codeception): Test HTTP endpoints and responses
-- **Integration tests**: Test complete workflows including statistics tracking
 
 ## Project Structure
 
 ```
-.
-├── Dockerfile
-├── docker-compose.yml
-├── composer.json
-├── phpunit.xml
-├── public/
-│   └── index.php          # Application entry point
-├── src/
-│   ├── EventHandler.php      # Event handling
-│   ├── FileStorage.php       # File storage
-│   └── StatisticsManager.php # Statistics management
-├── tests/
-│   ├── Unit/                 # PHPUnit tests
-|   |   └── EventHandlerTest.php
-│   ├── Api/                  # Codeception API tests
-│   │   ├── EventApiCest.php
-│   │   └── StatisticsApiCest.php
-│   └── Support/              # Test helpers
-└── storage/                  # Files with saved events and statistics
+src/
+├── Application/
+│   ├── Command/          # CreateGoalEventCommand, CreateFoulEventCommand + Handlers
+│   ├── Query/            # GetMatchStatisticsQuery, GetTeamStatisticsQuery + Handlers
+│   └── DTO/              # EventResponse, StatisticsResponse
+├── Domain/
+│   ├── Entity/           # GoalEvent, FoulEvent (Aggregate Roots)
+│   ├── ValueObject/      # EventId, MatchId, TeamId, PlayerId, Minute
+│   ├── Event/            # GoalScored, FoulCommitted (Domain Events)
+│   ├── Repository/       # EventRepositoryInterface, StatisticsRepositoryInterface
+│   ├── Service/          # EventNotifierInterface
+│   └── Exception/        # InvalidEventDataException
+├── Infrastructure/
+│   ├── Persistence/
+│   │   ├── Doctrine/     # DoctrineEventRepository, DoctrineStatisticsRepository, Types
+│   │   └── InMemory/     # InMemoryEventRepository, InMemoryStatisticsRepository
+│   └── Notification/     # MockEventNotifier
+└── Presentation/
+    └── Controller/       # EventController, StatisticsController
+
+config/doctrine/entity/   # XML mapping files (FootballEvent, GoalEvent, FoulEvent)
 ```
 
+## Real-time Notifications
+
+The `EventNotifierInterface` provides abstraction for real-time event delivery.
+Current implementation (`MockEventNotifier`) logs events. Production would use:
+- Mercure
+- WebSocket
+- Server-Sent Events
+
+## Further Development
+
+- [ ] Real-time notifications (Mercure/WebSocket)
+- [ ] More event types (yellow/red cards, substitutions)
+- [ ] Match lifecycle management
+- [ ] API authentication
+- [ ] OpenAPI documentation
+
+## AI Tools Usage
+
+This solution was developed with assistance from Claude (Anthropic) as a productivity tool.
+
+**My decisions and contributions:**
+- Architecture design (DDD + Light CQRS approach)
+- Technology choices (Symfony Messenger, Doctrine XML mapping, Value Objects)
+- Code structure and organization
+- Business logic implementation
+- Code style and conventions (PSR-12, Symfony standards)
+- Test scenarios and coverage strategy
+
+**AI assisted with:**
+- Boilerplate code generation (test files, repetitive structures)
+- Symfony/Doctrine configuration troubleshooting
+- Code review suggestions and spotting inconsistencies
+
+All code was reviewed, understood, and adjusted to match project conventions.
