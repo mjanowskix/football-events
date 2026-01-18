@@ -12,3 +12,22 @@ services:
             - '../src/Domain/ValueObject/'
             - '../src/Domain/Event/'
             - '../src/Kernel.php'
+
+    # Domain interfaces bindings
+    App\Domain\Repository\EventRepositoryInterface:
+        alias: App\Infrastructure\Persistence\Doctrine\DoctrineEventRepository
+
+    App\Domain\Repository\StatisticsRepositoryInterface:
+        alias: App\Infrastructure\Persistence\Doctrine\DoctrineStatisticsRepository
+
+    App\Domain\Service\EventNotifierInterface:
+        alias: App\Infrastructure\Notification\MockEventNotifier
+
+    # Controllers - inject specific buses
+    App\Presentation\Controller\EventController:
+        arguments:
+            $commandBus: '@command.bus'
+
+    App\Presentation\Controller\StatisticsController:
+        arguments:
+            $queryBus: '@query.bus'

@@ -1,0 +1,18 @@
+framework:
+    messenger:
+        default_bus: command.bus
+
+        buses:
+            command.bus:
+                middleware:
+                    - doctrine_transaction
+            query.bus: ~
+
+        transports:
+            sync: 'sync://'
+
+        routing:
+            'App\Application\Command\CreateGoalEventCommand': sync
+            'App\Application\Command\CreateFoulEventCommand': sync
+            'App\Application\Query\GetMatchStatisticsQuery': sync
+            'App\Application\Query\GetTeamStatisticsQuery': sync

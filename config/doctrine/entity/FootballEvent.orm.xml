@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Domain\Entity\FootballEvent" table="events" inheritance-type="SINGLE_TABLE">
+        <discriminator-column name="type" type="string" length="20"/>
+        <discriminator-map>
+            <discriminator-mapping value="goal" class="App\Domain\Entity\GoalEvent"/>
+            <discriminator-mapping value="foul" class="App\Domain\Entity\FoulEvent"/>
+        </discriminator-map>
+
+        <id name="id" type="event_id" column="id"/>
+
+        <field name="matchId" type="match_id" column="match_id"/>
+        <field name="teamId" type="team_id" column="team_id"/>
+        <field name="minute" type="minute" column="minute"/>
+        <field name="occurredAt" type="datetime_immutable" column="occurred_at"/>
+        <field name="createdAt" type="datetime_immutable" column="created_at"/>
+    </entity>
+
+</doctrine-mapping>

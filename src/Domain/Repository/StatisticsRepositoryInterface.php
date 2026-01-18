@@ -7,9 +7,6 @@ namespace App\Domain\Repository;
 use App\Domain\ValueObject\MatchId;
 use App\Domain\ValueObject\TeamId;
 
-/**
- * Repository interface for match/team statistics.
- */
 interface StatisticsRepositoryInterface
 {
     /**
@@ -25,14 +22,4 @@ interface StatisticsRepositoryInterface
      * @return array<string, array{goals: int, fouls: int}>
      */
     public function getMatchStatistics(MatchId $matchId): array;
-
-    /**
-     * Increment goals counter for a team.
-     */
-    public function incrementGoals(MatchId $matchId, TeamId $teamId): void;
-
-    /**
-     * Increment fouls counter for a team.
-     */
-    public function incrementFouls(MatchId $matchId, TeamId $teamId): void;
 }
